@@ -56,117 +56,120 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
 });
 
-const wordsInput = document.getElementById('words');
-const wordCount = document.getElementById('wordCount');
-const gapTimeInput = document.getElementById('gapTime');
-const accentSelect = document.getElementById('accent');
-const pitchInput = document.getElementById('pitch');
-const speedInput = document.getElementById('speed');
-const pitchValue = document.getElementById('pitchValue');
-const speedValue = document.getElementById('speedValue');
-const playBtn = document.getElementById('playBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const saveBtn = document.getElementById('saveBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const status = document.getElementById('status');
-const progressBar = document.getElementById('progressBar');
-const currentWord = document.getElementById('currentWord');
+// Only initialize app logic if on index.html
+if (document.getElementById('words')) {
+    const wordsInput = document.getElementById('words');
+    const wordCount = document.getElementById('wordCount');
+    const gapTimeInput = document.getElementById('gapTime');
+    const accentSelect = document.getElementById('accent');
+    const pitchInput = document.getElementById('pitch');
+    const speedInput = document.getElementById('speed');
+    const pitchValue = document.getElementById('pitchValue');
+    const speedValue = document.getElementById('speedValue');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const status = document.getElementById('status');
+    const progressBar = document.getElementById('progressBar');
+    const currentWord = document.getElementById('currentWord');
 
-let words = [];
-let currentWordIndex = 0;
-let isPlaying = false;
-let speechTimeout;
-let audioChunks = [];
+    let words = [];
+    let currentWordIndex = 0;
+    let isPlaying = false;
+    let speechTimeout;
+    let audioChunks = [];
 
-if (localStorage.getItem('savedWords')) {
-    wordsInput.value = localStorage.getItem('savedWords');
-    updateWordCount();
-}
-
-wordsInput.addEventListener('input', () => {
-    updateWordCount();
-    playBtn.disabled = words.length === 0;
-});
-
-function updateWordCount() {
-    words = wordsInput.value.split('\n').filter(word => word.trim() !== '');
-    wordCount.textContent = words.length;
-    updateProgressBar();
-}
-
-pitchInput.addEventListener('input', () => {
-    pitchValue.textContent = pitchInput.value;
-});
-
-speedInput.addEventListener('input', () => {
-    speedValue.textContent = speedInput.value;
-});
-
-saveBtn.addEventListener('click', () => {
-    localStorage.setItem('savedWords', wordsInput.value);
-    status.textContent = 'Words saved successfully!';
-    setTimeout(() => status.textContent = 'Enter words to start', 2000);
-});
-
-playBtn.addEventListener('click', () => {
-    if (!isPlaying && words.length > 0) {
-        isPlaying = true;
-        audioChunks = [];
-        playBtn.classList.add('hidden');
-        pauseBtn.classList.remove('hidden');
-        downloadBtn.classList.add('hidden');
-        status.textContent = 'Playing...';
-        speakWords();
+    if (localStorage.getItem('savedWords')) {
+        wordsInput.value = localStorage.getItem('savedWords');
+        updateWordCount();
     }
-});
 
-pauseBtn.addEventParticleBackground('click', () => {
-    isPlaying = false;
-    clearTimeout(speechTimeout);
-    speechSynthesis.cancel();
-    playBtn.classList.remove('hidden');
-    pauseBtn.classList.add('hidden');
-    status.textContent = 'Paused';
-    if (audioChunks.length > 0) {
-        downloadBtn.classList.remove('hidden');
+    wordsInput.addEventListener('input', () => {
+        updateWordCount();
+        playBtn.disabled = words.length === 0;
+    });
+
+    function updateWordCount() {
+        words = wordsInput.value.split('\n').filter(word => word.trim() !== '');
+        wordCount.textContent = words.length;
+        updateProgressBar();
     }
-});
 
-function updateProgressBar() {
-    const progress = words.length > 0 ? (currentWordIndex / words.length) * 100 : 0;
-    progressBar.style.width = `${progress}%`;
-}
+    pitchInput.addEventListener('input', () => {
+        pitchValue.textContent = pitchInput.value;
+    });
 
-function speakWords() {
-    if (!isPlaying || currentWordIndex >= words.length) {
+    speedInput.addEventListener('input', () => {
+        speedValue.textContent = speedInput.value;
+    });
+
+    saveBtn.addEventListener('click', () => {
+        localStorage.setItem('savedWords', wordsInput.value);
+        status.textContent = 'Words saved successfully!';
+        setTimeout(() => status.textContent = 'Enter words to start', 2000);
+    });
+
+    playBtn.addEventListener('click', () => {
+        if (!isPlaying && words.length > 0) {
+            isPlaying = true;
+            audioChunks = [];
+            playBtn.classList.add('hidden');
+            pauseBtn.classList.remove('hidden');
+            downloadBtn.classList.add('hidden');
+            status.textContent = 'Playing...';
+            speakWords();
+        }
+    });
+
+    pauseBtn.addEventListener('click', () => {
         isPlaying = false;
+        clearTimeout(speechTimeout);
+        speechSynthesis.cancel();
         playBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
-        status.textContent = 'Finished playing';
-        currentWord.textContent = 'None';
+        status.textContent = 'Paused';
         if (audioChunks.length > 0) {
             downloadBtn.classList.remove('hidden');
         }
-        currentWordIndex = 0;
-        updateProgressBar();
-        return;
+    });
+
+    function updateProgressBar() {
+        const progress = words.length > 0 ? (currentWordIndex / words.length) * 100 : 0;
+        progressBar.style.width = `${progress}%`;
     }
 
-    const utterance = new SpeechSynthesisUtterance(words[currentWordIndex]);
-    utterance.lang = accentSelect.value;
-    utterance.pitch = parseFloat(pitchInput.value);
-    utterance.rate = parseFloat(speedInput.value);
-    utterance.onend = () => {
-        currentWordIndex++;
-        updateProgressBar();
-        speechTimeout = setTimeout(speakWords, gapTimeInput.value * 1000);
-    };
-    speechSynthesis.speak(utterance);
-    status.textContent = `Speaking: ${words[currentWordIndex]}`;
-    currentWord.textContent = words[currentWordIndex];
-}
+    function speakWords() {
+        if (!isPlaying || currentWordIndex >= words.length) {
+            isPlaying = false;
+            playBtn.classList.remove('hidden');
+            pauseBtn.classList.add('hidden');
+            status.textContent = 'Finished playing';
+            currentWord.textContent = 'None';
+            if (audioChunks.length > 0) {
+                downloadBtn.classList.remove('hidden');
+            }
+            currentWordIndex = 0;
+            updateProgressBar();
+            return;
+        }
 
-downloadBtn.addEventListener('click', () => {
-    status.textContent = 'Download not fully supported in browser. Try desktop app for audio export.';
-    setTimeout(() => status.textContent = 'Enter words to start', 3000);
-});
+        const utterance = new SpeechSynthesisUtterance(words[currentWordIndex]);
+        utterance.lang = accentSelect.value;
+        utterance.pitch = parseFloat(pitchInput.value);
+        utterance.rate = parseFloat(speedInput.value);
+        utterance.onend = () => {
+            currentWordIndex++;
+            updateProgressBar();
+            speechTimeout = setTimeout(speakWords, gapTimeInput.value * 1000);
+        };
+        speechSynthesis.speak(utterance);
+        status.textContent = `Speaking: ${words[currentWordIndex]}`;
+        currentWord.textContent = words[currentWordIndex];
+    }
+
+    downloadBtn.addEventListener('click', () => {
+        status.textContent = 'Download not fully supported in browser. Try desktop app for audio export.';
+        setTimeout(() => status.textContent = 'Enter words to start', 3000);
+    });
+}
