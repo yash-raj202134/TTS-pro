@@ -56,120 +56,152 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight;
 });
 
-// Only initialize app logic if on index.html
-if (document.getElementById('words')) {
-    const wordsInput = document.getElementById('words');
-    const wordCount = document.getElementById('wordCount');
-    const gapTimeInput = document.getElementById('gapTime');
-    const accentSelect = document.getElementById('accent');
-    const pitchInput = document.getElementById('pitch');
-    const speedInput = document.getElementById('speed');
-    const pitchValue = document.getElementById('pitchValue');
-    const speedValue = document.getElementById('speedValue');
-    const playBtn = document.getElementById('playBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const status = document.getElementById('status');
-    const progressBar = document.getElementById('progressBar');
-    const currentWord = document.getElementById('currentWord');
+// Navigation Logic
+const homeSection = document.getElementById('home-section');
+const aboutSection = document.getElementById('about-section');
+const navLinks = document.querySelectorAll('.nav-link');
 
-    let words = [];
-    let currentWordIndex = 0;
-    let isPlaying = false;
-    let speechTimeout;
-    let audioChunks = [];
+function showSection(section) {
+    homeSection.classList.add('hidden');
+    aboutSection.classList.add('hidden');
+    document.getElementById(`${section}-section`).classList.remove('hidden');
+    history.pushState(null, '', `#${section}`);
+}
 
+navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = link.getAttribute('data-section');
+        showSection(section);
+    });
+});
+
+// Show section based on URL hash
+window.addEventListener('load', () => {
+    const hash = window.location.hash.replace('#', '') || 'home';
+    showSection(hash);
+});
+
+// App Logic for Home Section
+const wordsInput = document.getElementById('words');
+const wordCount = document.getElementById('wordCount');
+const gapTimeInput = document.getElementById('gapTime');
+const accentSelect = document.getElementById('accent');
+const pitchInput = document.getElementById('pitch');
+const speedInput = document.getElementById('speed');
+const pitchValue = document.getElementById('pitchValue');
+const speedValue = document.getElementById('speedValue');
+const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const saveBtn = document.getElementById('saveBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const status = document.getElementById('status');
+const progressBar = document.getElementById('progressBar');
+const currentWord = document.getElementById('currentWord');
+
+let words = [];
+let currentWordIndex = 0;
+let isPlaying = false;
+let speechTimeout;
+let audioChunks = [];
+
+// Initialize: Load saved words and update UI
+function initializeApp() {
     if (localStorage.getItem('savedWords')) {
         wordsInput.value = localStorage.getItem('savedWords');
         updateWordCount();
-    }
-
-    wordsInput.addEventListener('input', () => {
-        updateWordCount();
         playBtn.disabled = words.length === 0;
-    });
-
-    function updateWordCount() {
-        words = wordsInput.value.split('\n').filter(word => word.trim() !== '');
-        wordCount.textContent = words.length;
-        updateProgressBar();
     }
+    pitchValue.textContent = pitchInput.value;
+    speedValue.textContent = speedInput.value;
+}
 
-    pitchInput.addEventListener('input', () => {
-        pitchValue.textContent = pitchInput.value;
-    });
+function updateWordCount() {
+    words = wordsInput.value.split('\n').filter(word => word.trim() !== '');
+    wordCount.textContent = words.length;
+    playBtn.disabled = words.length === 0;
+    updateProgressBar();
+}
 
-    speedInput.addEventListener('input', () => {
-        speedValue.textContent = speedInput.value;
-    });
+function updateProgressBar() {
+    const progress = words.length > 0 ? (currentWordIndex / words.length) * 100 : 0;
+    progressBar.style.width = `${progress}%`;
+}
 
-    saveBtn.addEventListener('click', () => {
-        localStorage.setItem('savedWords', wordsInput.value);
-        status.textContent = 'Words saved successfully!';
-        setTimeout(() => status.textContent = 'Enter words to start', 2000);
-    });
+// Event Listeners
+wordsInput.addEventListener('input', updateWordCount);
 
-    playBtn.addEventListener('click', () => {
-        if (!isPlaying && words.length > 0) {
-            isPlaying = true;
-            audioChunks = [];
-            playBtn.classList.add('hidden');
-            pauseBtn.classList.remove('hidden');
-            downloadBtn.classList.add('hidden');
-            status.textContent = 'Playing...';
-            speakWords();
-        }
-    });
+pitchInput.addEventListener('input', () => {
+    pitchValue.textContent = pitchInput.value;
+});
 
-    pauseBtn.addEventListener('click', () => {
+speedInput.addEventListener('input', () => {
+    speedValue.textContent = speedInput.value;
+});
+
+saveBtn.addEventListener('click', () => {
+    localStorage.setItem('savedWords', wordsInput.value);
+    status.textContent = 'Words saved to local storage!';
+    setTimeout(() => status.textContent = 'Enter words to start', 2000);
+});
+
+playBtn.addEventListener('click', () => {
+    if (!isPlaying && words.length > 0) {
+        isPlaying = true;
+        audioChunks = [];
+        playBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+        downloadBtn.classList.add('hidden');
+        status.textContent = 'Playing...';
+        speakWords();
+    }
+});
+
+pauseBtn.addEventListener('click', () => {
+    isPlaying = false;
+    clearTimeout(speechTimeout);
+    speechSynthesis.cancel();
+    playBtn.classList.remove('hidden');
+    pauseBtn.classList.add('hidden');
+    status.textContent = 'Paused';
+    if (audioChunks.length > 0) {
+        downloadBtn.classList.remove('hidden');
+    }
+});
+
+function speakWords() {
+    if (!isPlaying || currentWordIndex >= words.length) {
         isPlaying = false;
-        clearTimeout(speechTimeout);
-        speechSynthesis.cancel();
         playBtn.classList.remove('hidden');
         pauseBtn.classList.add('hidden');
-        status.textContent = 'Paused';
+        status.textContent = 'Finished playing';
+        currentWord.textContent = 'None';
         if (audioChunks.length > 0) {
             downloadBtn.classList.remove('hidden');
         }
-    });
-
-    function updateProgressBar() {
-        const progress = words.length > 0 ? (currentWordIndex / words.length) * 100 : 0;
-        progressBar.style.width = `${progress}%`;
+        currentWordIndex = 0;
+        updateProgressBar();
+        return;
     }
 
-    function speakWords() {
-        if (!isPlaying || currentWordIndex >= words.length) {
-            isPlaying = false;
-            playBtn.classList.remove('hidden');
-            pauseBtn.classList.add('hidden');
-            status.textContent = 'Finished playing';
-            currentWord.textContent = 'None';
-            if (audioChunks.length > 0) {
-                downloadBtn.classList.remove('hidden');
-            }
-            currentWordIndex = 0;
-            updateProgressBar();
-            return;
-        }
-
-        const utterance = new SpeechSynthesisUtterance(words[currentWordIndex]);
-        utterance.lang = accentSelect.value;
-        utterance.pitch = parseFloat(pitchInput.value);
-        utterance.rate = parseFloat(speedInput.value);
-        utterance.onend = () => {
-            currentWordIndex++;
-            updateProgressBar();
-            speechTimeout = setTimeout(speakWords, gapTimeInput.value * 1000);
-        };
-        speechSynthesis.speak(utterance);
-        status.textContent = `Speaking: ${words[currentWordIndex]}`;
-        currentWord.textContent = words[currentWordIndex];
-    }
-
-    downloadBtn.addEventListener('click', () => {
-        status.textContent = 'Download not fully supported in browser. Try desktop app for audio export.';
-        setTimeout(() => status.textContent = 'Enter words to start', 3000);
-    });
+    const utterance = new SpeechSynthesisUtterance(words[currentWordIndex]);
+    utterance.lang = accentSelect.value;
+    utterance.pitch = parseFloat(pitchInput.value);
+    utterance.rate = parseFloat(speedInput.value);
+    utterance.onend = () => {
+        currentWordIndex++;
+        updateProgressBar();
+        speechTimeout = setTimeout(speakWords, gapTimeInput.value * 1000);
+    };
+    speechSynthesis.speak(utterance);
+    status.textContent = `Speaking: ${words[currentWordIndex]}`;
+    currentWord.textContent = words[currentWordIndex];
 }
+
+downloadBtn.addEventListener('click', () => {
+    status.textContent = 'Download not supported in browser. Try a desktop app for audio export.';
+    setTimeout(() => status.textContent = 'Enter words to start', 3000);
+});
+
+// Start the app
+initializeApp();

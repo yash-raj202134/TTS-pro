@@ -21,15 +21,6 @@ Responsive design with Tailwind CSS.
 
 Performance: Lightweight, using the Web Speech API for fast speech synthesis.
 
-Installation
-
-Clone or download this repository.
-Place index.html, style.css, and script.js in the same directory.
-Open index.html in a modern browser (Chrome, Edge, Firefox, Safari).
-
-Hosting
-Deploy for free on platforms like GitHub Pages, Netlify, or Vercel:
-
 GitHub Pages:
 Create a GitHub repository.
 Upload index.html, style.css, and script.js.
