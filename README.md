@@ -25,7 +25,7 @@ GitHub Pages:
 Create a GitHub repository.
 Upload index.html, style.css, and script.js.
 Enable GitHub Pages in the repository settings (use the main branch).
-Access the app at https://github.com/yash-raj202134/TTS-pro.
+Access the app at https://ttspro.netlify.app/.
 
 
 Netlify/Vercel:
